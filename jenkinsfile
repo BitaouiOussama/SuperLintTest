@@ -1,0 +1,41 @@
+pipeline {
+    agent any
+    
+    environment {
+        // Define the GitHub token if required, or you can use credentials
+        GITHUB_TOKEN = credentials('GITHUB_TOKEN')  // Assuming you store the token as Jenkins secret
+    }
+
+    stages {
+        stage('Checkout Code') {
+            steps {
+                // Checkout the code from the repository
+                git 'https://github.com/your-repository-url.git'  // Replace with your repo URL
+            }
+        }
+
+        stage('Run Super-Linter') {
+            steps {
+                script {
+                    // Pull and run the Super-Linter container
+                    sh """
+                    docker run -e RUN_LOCAL=true -e DEFAULT_BRANCH=main -e GITHUB_TOKEN=${GITHUB_TOKEN} -v \$(pwd):/tmp/lint github/super-linter:latest
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            // Clean up Docker images (optional but recommended)
+            sh 'docker system prune -f'
+        }
+        success {
+            echo 'Linting successful!'
+        }
+        failure {
+            echo 'Linting failed! Please check the errors above.'
+        }
+    }
+}
